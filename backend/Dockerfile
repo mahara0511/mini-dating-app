@@ -18,7 +18,6 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/src/migrations ./dist/migrations
 
 EXPOSE 3001
 

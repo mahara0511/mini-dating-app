@@ -194,9 +194,9 @@ export default function ProfilesPage() {
                     {likingId === user.id ? (
                       <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
                     ) : likedMap[user.id] ? (
-                      <>✅ Đã Like</>
+                      <>Đã Like</>
                     ) : (
-                      <>❤️ Like</>
+                      <>Like</>
                     )}
                   </button>
                 </div>
@@ -233,7 +233,7 @@ export default function ProfilesPage() {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <a href={`/schedule/${matchPopup.id}`}>
                 <button className="btn-primary">
-                  📅 Hẹn lịch ngay
+                  Hẹn lịch ngay
                 </button>
               </a>
               <button

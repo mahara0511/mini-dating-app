@@ -82,7 +82,7 @@ export default function MatchesPage() {
               Hãy khám phá và like những người bạn thích. Khi cả hai cùng like → Match!
             </p>
             <a href="/profiles">
-              <button className="btn-primary">🔍 Khám phá ngay</button>
+              <button className="btn-primary">Khám phá ngay</button>
             </a>
           </div>
         ) : (
@@ -138,7 +138,7 @@ export default function MatchesPage() {
                       ) : (
                         <a href={`/schedule/${match.id}`}>
                           <button className="btn-primary" style={{ padding: '10px 20px', fontSize: '0.85rem' }}>
-                            📅 Hẹn lịch
+                            Hẹn lịch
                           </button>
                         </a>
                       )}

@@ -103,7 +103,7 @@ export default function LoginPage() {
                   Đang tìm...
                 </span>
               ) : (
-                '🔑 Đăng nhập'
+                'Đăng nhập'
               )}
             </button>
 

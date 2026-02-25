@@ -218,9 +218,9 @@ export default function CreateProfilePage() {
                   Đang tạo...
                 </span>
               ) : success ? (
-                '✅ Đã tạo!'
+                'Đã tạo!'
               ) : (
-                '💕 Tạo Profile'
+                'Tạo Profile'
               )}
             </button>
           </div>

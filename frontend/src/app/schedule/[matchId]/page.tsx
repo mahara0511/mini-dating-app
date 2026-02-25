@@ -415,7 +415,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                           marginTop: '16px',
                         }}
                       >
-                        🗑️
+                        Xóa
                       </button>
                     </div>
                   ))}
@@ -436,9 +436,9 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                         Đang lưu...
                       </span>
                     ) : saved ? (
-                      '✅ Đã lưu'
+                      'Đã lưu'
                     ) : (
-                      '💾 Lưu thời gian rảnh'
+                      'Lưu thời gian rảnh'
                     )}
                   </button>
                 </div>
@@ -471,7 +471,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                       Đang tìm...
                     </span>
                   ) : (
-                    '🔍 Tìm thời gian trùng'
+                    'Tìm thời gian trùng'
                   )}
                 </button>
               </div>

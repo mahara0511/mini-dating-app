@@ -41,7 +41,7 @@ export default function HomePage() {
             {['💕', '✨', '💗', '🌟', '💖', '💜', '💫'].map((emoji, i) => (
               <span key={i} style={{
                 position: 'absolute',
-                fontSize: `${1.5 + Math.random() * 2}rem`,
+                fontSize: `${1.8 + i * 0.3}rem`,
                 left: `${10 + i * 12}%`,
                 top: `${20 + Math.sin(i) * 30}%`,
                 opacity: 0.15,
@@ -93,12 +93,12 @@ export default function HomePage() {
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link href="/create-profile">
                 <button className="btn-primary" style={{ fontSize: '1.05rem', padding: '16px 36px' }}>
-                  ✨ Tạo Profile Ngay
+                  Tạo Profile Ngay
                 </button>
               </Link>
               <Link href="/profiles">
                 <button className="btn-secondary" style={{ fontSize: '1.05rem', padding: '16px 36px' }}>
-                  🔍 Khám Phá
+                  Khám Phá
                 </button>
               </Link>
             </div>
@@ -166,7 +166,7 @@ export default function HomePage() {
               </p>
               <Link href="/login">
                 <button className="btn-primary">
-                  🔑 Đăng nhập
+                  Đăng nhập
                 </button>
               </Link>
             </div>

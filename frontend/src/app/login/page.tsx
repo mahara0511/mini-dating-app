@@ -17,7 +17,7 @@ export default function LoginPage() {
     setLoading(true);
 
     if (!email.trim() || !email.includes('@')) {
-      setError('Vui lòng nhập email hợp lệ');
+      setError('Please enter a valid email');
       setLoading(false);
       return;
     }
@@ -25,7 +25,7 @@ export default function LoginPage() {
     try {
       const user = await getUserByEmail(email.trim().toLowerCase());
       if (!user) {
-        setError('Không tìm thấy profile với email này. Hãy tạo profile mới!');
+        setError('No profile found with this email. Please create a new profile!');
         setLoading(false);
         return;
       }
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
       router.push('/profiles');
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra');
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -56,10 +56,10 @@ export default function LoginPage() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            Đăng nhập
+            Log In
           </h1>
           <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.95rem' }}>
-            Nhập email bạn đã dùng khi tạo profile
+            Enter the email you used to create your profile
           </p>
         </div>
 
@@ -100,16 +100,16 @@ export default function LoginPage() {
               {loading ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
-                  Đang tìm...
+                  Searching...
                 </span>
               ) : (
-                'Đăng nhập'
+                'Log In'
               )}
             </button>
 
             <div style={{ textAlign: 'center' }}>
               <span style={{ color: 'rgba(226, 232, 240, 0.4)', fontSize: '0.9rem' }}>
-                Chưa có profile?{' '}
+                Don't have a profile?{' '}
               </span>
               <a
                 href="/create-profile"
@@ -120,7 +120,7 @@ export default function LoginPage() {
                   fontSize: '0.9rem',
                 }}
               >
-                Tạo mới →
+                Create one →
               </a>
             </div>
           </div>

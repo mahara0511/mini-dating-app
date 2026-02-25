@@ -76,12 +76,12 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
           date: matchData.scheduledDate,
           startTime: matchData.scheduledTimeStart || '',
           endTime: matchData.scheduledTimeEnd || '',
-          message: `✅ Hai bạn có date hẹn vào: ${formatDateStr(matchData.scheduledDate)} từ ${matchData.scheduledTimeStart} đến ${matchData.scheduledTimeEnd}`,
+          message: `You have a date scheduled on: ${formatDateStr(matchData.scheduledDate)} from ${matchData.scheduledTimeStart} to ${matchData.scheduledTimeEnd}`,
         });
       }
     } catch (err) {
       console.error('Failed to load schedule data', err);
-      showToast('Không thể tải dữ liệu', 'error');
+      showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
@@ -124,14 +124,14 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
   const handleSave = async () => {
     if (!currentUserId || mySlots.length === 0) {
-      showToast('Vui lòng thêm ít nhất 1 slot thời gian', 'error');
+      showToast('Please add at least 1 time slot', 'error');
       return;
     }
 
     // Validate slots
     for (const slot of mySlots) {
       if (slot.startTime >= slot.endTime) {
-        showToast('Giờ bắt đầu phải nhỏ hơn giờ kết thúc', 'error');
+        showToast('Start time must be before end time', 'error');
         return;
       }
     }
@@ -140,13 +140,13 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     try {
       await saveAvailability(currentUserId, matchId, mySlots);
       setSaved(true);
-      showToast('✅ Đã lưu thời gian rảnh!', 'success');
+      showToast('Availability saved!', 'success');
 
       // Refresh status
       const status = await getAvailabilityStatus(matchId);
       setAvailabilityStatus(status);
     } catch (err: any) {
-      showToast(err.message || 'Có lỗi xảy ra', 'error');
+      showToast(err.message || 'An error occurred', 'error');
     } finally {
       setSaving(false);
     }
@@ -164,7 +164,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
         setMatch(updated);
       }
     } catch (err: any) {
-      showToast(err.message || 'Có lỗi khi tìm slot', 'error');
+      showToast(err.message || 'Error finding slot', 'error');
     } finally {
       setFinding(false);
     }
@@ -177,7 +177,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
   const formatDateStr = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('vi-VN', {
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -187,7 +187,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
   const formatShortDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('vi-VN', {
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
       day: 'numeric',
       month: 'numeric',
@@ -231,11 +231,11 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            📅 Đề xuất lịch hẹn
+            Schedule a Date
           </h1>
           {partner && (
             <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.95rem' }}>
-              Hẹn lịch với <strong style={{ color: '#f093fb' }}>{partner.name}</strong>
+              Schedule with <strong style={{ color: '#f093fb' }}>{partner.name}</strong>
             </p>
           )}
         </div>
@@ -244,7 +244,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
         <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
             <div>
-              <p style={{ fontSize: '0.8rem', color: 'rgba(226, 232, 240, 0.4)', marginBottom: '4px' }}>Bạn</p>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(226, 232, 240, 0.4)', marginBottom: '4px' }}>You</p>
               <span style={{
                 padding: '4px 12px',
                 borderRadius: '50px',
@@ -253,7 +253,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                 background: myAvailabilitySet ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                 color: myAvailabilitySet ? '#6ee7b7' : '#fca5a5',
               }}>
-                {myAvailabilitySet ? '✅ Đã chọn' : '⏳ Chưa chọn'}
+                {myAvailabilitySet ? 'Selected' : 'Not selected'}
               </span>
             </div>
             <div style={{ fontSize: '1.5rem', color: 'rgba(226, 232, 240, 0.2)' }}>💕</div>
@@ -267,7 +267,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                 background: partnerAvailabilitySet ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                 color: partnerAvailabilitySet ? '#6ee7b7' : '#fca5a5',
               }}>
-                {partnerAvailabilitySet ? '✅ Đã chọn' : '⏳ Chưa chọn'}
+                {partnerAvailabilitySet ? 'Selected' : 'Not selected'}
               </span>
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
               marginBottom: '8px',
               color: '#6ee7b7',
             }}>
-              Date đã được xác nhận!
+              Date confirmed!
             </h3>
             <p style={{ color: '#a7f3d0', fontSize: '1.05rem', lineHeight: 1.7 }}>
               {commonSlotResult.message}
@@ -297,7 +297,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
             <div style={{ marginTop: '20px' }}>
               <a href="/matches">
                 <button className="btn-primary" style={{ padding: '12px 24px' }}>
-                  ← Về trang Matches
+                  ← Back to Matches
                 </button>
               </a>
             </div>
@@ -325,21 +325,21 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
             <div className="glass-card" style={{ padding: '28px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0' }}>
-                  🕐 Thời gian rảnh của bạn
+                  Your Available Times
                 </h3>
                 <button
                   className="btn-primary"
                   onClick={addSlot}
                   style={{ padding: '8px 16px', fontSize: '0.85rem' }}
                 >
-                  + Thêm slot
+                  + Add slot
                 </button>
               </div>
 
               {mySlots.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px', color: 'rgba(226, 232, 240, 0.4)' }}>
-                  <p style={{ marginBottom: '12px' }}>Chưa có slot nào. Nhấn &quot;+ Thêm slot&quot; để bắt đầu.</p>
-                  <p style={{ fontSize: '0.8rem' }}>Chọn ngày và khoảng giờ bạn rảnh trong 3 tuần tới</p>
+                  <p style={{ marginBottom: '12px' }}>No slots yet. Click &quot;+ Add slot&quot; to start.</p>
+                  <p style={{ fontSize: '0.8rem' }}>Select dates and time ranges you're free in the next 3 weeks</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -359,7 +359,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                     >
                       <div style={{ flex: '1 1 160px' }}>
                         <label style={{ fontSize: '0.75rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
-                          Ngày
+                          Date
                         </label>
                         <select
                           className="select-field"
@@ -377,7 +377,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
                       <div style={{ flex: '0 1 120px' }}>
                         <label style={{ fontSize: '0.75rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
-                          Từ
+                          From
                         </label>
                         <input
                           type="time"
@@ -390,7 +390,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
                       <div style={{ flex: '0 1 120px' }}>
                         <label style={{ fontSize: '0.75rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
-                          Đến
+                          To
                         </label>
                         <input
                           type="time"
@@ -415,7 +415,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                           marginTop: '16px',
                         }}
                       >
-                        Xóa
+                        Remove
                       </button>
                     </div>
                   ))}
@@ -433,12 +433,12 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                     {saving ? (
                       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                         <span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
-                        Đang lưu...
+                         Saving...
                       </span>
                     ) : saved ? (
-                      'Đã lưu'
+                      'Saved'
                     ) : (
-                      'Lưu thời gian rảnh'
+                      'Save availability'
                     )}
                   </button>
                 </div>
@@ -454,10 +454,10 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                 background: 'rgba(102, 126, 234, 0.08)',
               }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: '#e2e8f0' }}>
-                  🎯 Cả hai đều đã chọn thời gian!
+                  Both of you have selected your times!
                 </h3>
                 <p style={{ color: 'rgba(226, 232, 240, 0.5)', marginBottom: '20px', fontSize: '0.9rem' }}>
-                  Nhấn nút bên dưới để tìm thời gian trùng nhau
+                  Click the button below to find overlapping times
                 </p>
                 <button
                   className="btn-secondary"
@@ -468,10 +468,10 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                   {finding ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                       <span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
-                      Đang tìm...
+                       Finding...
                     </span>
                   ) : (
-                    'Tìm thời gian trùng'
+                    'Find overlapping times'
                   )}
                 </button>
               </div>
@@ -485,7 +485,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                 background: 'rgba(245, 158, 11, 0.05)',
               }}>
                 <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.9rem' }}>
-                  ⏳ Đang chờ <strong style={{ color: '#f093fb' }}>{partner?.name}</strong> chọn thời gian rảnh...
+                  Waiting for <strong style={{ color: '#f093fb' }}>{partner?.name}</strong> to select their availability...
                 </p>
               </div>
             )}

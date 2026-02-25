@@ -40,7 +40,7 @@ export default function MatchesPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('vi-VN', {
+    return new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -61,10 +61,10 @@ export default function MatchesPage() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            💕 Matches của bạn
+            💕 Your Matches
           </h1>
           <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.95rem' }}>
-            Những người đã match với bạn
+            People who matched with you
           </p>
         </div>
 
@@ -76,13 +76,13 @@ export default function MatchesPage() {
           <div className="glass-card" style={{ padding: '60px', textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔍</div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '12px', color: '#e2e8f0' }}>
-              Chưa có match nào
+              No matches yet
             </h3>
             <p style={{ color: 'rgba(226, 232, 240, 0.5)', marginBottom: '24px' }}>
-              Hãy khám phá và like những người bạn thích. Khi cả hai cùng like → Match!
+              Discover and like people you're interested in. When both like each other → Match!
             </p>
             <a href="/profiles">
-              <button className="btn-primary">Khám phá ngay</button>
+              <button className="btn-primary">Discover now</button>
             </a>
           </div>
         ) : (
@@ -107,7 +107,7 @@ export default function MatchesPage() {
                         </span>
                       </div>
                       <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.85rem' }}>
-                        {partner?.age} tuổi • {partner?.gender === 'male' ? 'Nam' : partner?.gender === 'female' ? 'Nữ' : 'Khác'}
+                        {partner?.age} years old • {partner?.gender === 'male' ? 'Male' : partner?.gender === 'female' ? 'Female' : 'Other'}
                       </p>
                       {partner?.bio && (
                         <p style={{ color: 'rgba(226, 232, 240, 0.4)', fontSize: '0.85rem', marginTop: '4px' }}>
@@ -126,7 +126,7 @@ export default function MatchesPage() {
                           textAlign: 'center',
                         }}>
                           <p style={{ color: '#6ee7b7', fontSize: '0.75rem', fontWeight: 600, marginBottom: '2px' }}>
-                            📅 Date đã hẹn
+                            📅 Scheduled Date
                           </p>
                           <p style={{ color: '#a7f3d0', fontSize: '0.8rem' }}>
                             {formatDate(match.scheduledDate)}
@@ -138,7 +138,7 @@ export default function MatchesPage() {
                       ) : (
                         <a href={`/schedule/${match.id}`}>
                           <button className="btn-primary" style={{ padding: '10px 20px', fontSize: '0.85rem' }}>
-                            Hẹn lịch
+                            Schedule
                           </button>
                         </a>
                       )}

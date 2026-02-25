@@ -35,22 +35,22 @@ export default function CreateProfilePage() {
 
     // Validation
     if (!form.name.trim()) {
-      setError('Vui lòng nhập tên');
+      setError('Please enter your name');
       setLoading(false);
       return;
     }
     if (!form.age || parseInt(form.age) < 18 || parseInt(form.age) > 100) {
-      setError('Tuổi phải từ 18 đến 100');
+      setError('Age must be between 18 and 100');
       setLoading(false);
       return;
     }
     if (!form.gender) {
-      setError('Vui lòng chọn giới tính');
+      setError('Please select a gender');
       setLoading(false);
       return;
     }
     if (!form.email.trim() || !form.email.includes('@')) {
-      setError('Vui lòng nhập email hợp lệ');
+      setError('Please enter a valid email');
       setLoading(false);
       return;
     }
@@ -74,7 +74,7 @@ export default function CreateProfilePage() {
         router.push('/profiles');
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+      setError(err.message || 'An error occurred, please try again');
     } finally {
       setLoading(false);
     }
@@ -94,10 +94,10 @@ export default function CreateProfilePage() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            Tạo Profile
+            Create Profile
           </h1>
           <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.95rem' }}>
-            Điền thông tin để bắt đầu tìm kiếm người ấy
+            Fill in your info to start finding your match
           </p>
         </div>
 
@@ -105,12 +105,12 @@ export default function CreateProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Name */}
             <div>
-              <label className="form-label" htmlFor="name">Tên</label>
+              <label className="form-label" htmlFor="name">Name</label>
               <input
                 id="name"
                 type="text"
                 className="input-field"
-                placeholder="Nhập tên của bạn"
+                placeholder="Enter your name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -119,7 +119,7 @@ export default function CreateProfilePage() {
             {/* Age & Gender Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label className="form-label" htmlFor="age">Tuổi</label>
+                <label className="form-label" htmlFor="age">Age</label>
                 <input
                   id="age"
                   type="number"
@@ -132,17 +132,17 @@ export default function CreateProfilePage() {
                 />
               </div>
               <div>
-                <label className="form-label" htmlFor="gender">Giới tính</label>
+                <label className="form-label" htmlFor="gender">Gender</label>
                 <select
                   id="gender"
                   className="select-field"
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
                 >
-                  <option value="">Chọn...</option>
-                  <option value="male">Nam</option>
-                  <option value="female">Nữ</option>
-                  <option value="other">Khác</option>
+                  <option value="">Select...</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function CreateProfilePage() {
               <textarea
                 id="bio"
                 className="input-field"
-                placeholder="Viết vài dòng giới thiệu về bản thân..."
+                placeholder="Write a few lines about yourself..."
                 rows={4}
                 style={{ resize: 'vertical' }}
                 value={form.bio}
@@ -173,7 +173,7 @@ export default function CreateProfilePage() {
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
               <p style={{ fontSize: '0.8rem', color: 'rgba(226, 232, 240, 0.4)', marginTop: '6px' }}>
-                Email dùng để định danh tài khoản
+                Email is used for account identification
               </p>
             </div>
 
@@ -201,7 +201,7 @@ export default function CreateProfilePage() {
                 color: '#6ee7b7',
                 fontSize: '0.9rem',
               }}>
-                ✅ Profile đã được tạo thành công! Đang chuyển hướng...
+                Profile created successfully! Redirecting...
               </div>
             )}
 
@@ -215,12 +215,12 @@ export default function CreateProfilePage() {
               {loading ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
-                  Đang tạo...
+                   Creating...
                 </span>
               ) : success ? (
-                'Đã tạo!'
+                'Created!'
               ) : (
-                'Tạo Profile'
+                'Create Profile'
               )}
             </button>
           </div>

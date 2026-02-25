@@ -108,7 +108,7 @@ export class AvailabilityService {
               date: slotA.date,
               startTime: overlapStart,
               endTime: overlapEnd,
-              message: `✅ Hai bạn có date hẹn vào: ${this.formatDate(slotA.date)} từ ${overlapStart} đến ${overlapEnd}`,
+              message: `You have a date on: ${this.formatDate(slotA.date)} from ${overlapStart} to ${overlapEnd}`,
             };
           }
         }
@@ -117,7 +117,7 @@ export class AvailabilityService {
 
     return {
       found: false,
-      message: 'Chưa tìm được thời gian trùng. Vui lòng chọn lại.',
+      message: 'No overlapping time found. Please try again.',
     };
   }
 
@@ -160,6 +160,6 @@ export class AvailabilityService {
       month: 'long',
       day: 'numeric',
     };
-    return date.toLocaleDateString('vi-VN', options);
+    return date.toLocaleDateString('en-US', options);
   }
 }

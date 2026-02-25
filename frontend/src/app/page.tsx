@@ -73,10 +73,10 @@ export default function HomePage() {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                Tìm người ấy
+                Find your
               </span>
               <br />
-              <span style={{ color: '#e2e8f0' }}>của bạn</span>
+              <span style={{ color: '#e2e8f0' }}>perfect match</span>
             </h1>
 
             <p style={{
@@ -86,19 +86,19 @@ export default function HomePage() {
               margin: '0 auto 40px',
               lineHeight: 1.7,
             }}>
-              Mini Dating App – Tạo profile, khám phá, like và match. 
-              Khi cả hai đều thích nhau, hẹn lịch gặp mặt ngay!
+              Mini Dating App – Create your profile, discover, like and match. 
+              When both of you like each other, schedule a date right away!
             </p>
 
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link href="/create-profile">
                 <button className="btn-primary" style={{ fontSize: '1.05rem', padding: '16px 36px' }}>
-                  Tạo Profile Ngay
+                  Create Profile
                 </button>
               </Link>
               <Link href="/profiles">
                 <button className="btn-secondary" style={{ fontSize: '1.05rem', padding: '16px 36px' }}>
-                  Khám Phá
+                  Discover
                 </button>
               </Link>
             </div>
@@ -116,7 +116,7 @@ export default function HomePage() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            Cách hoạt động
+            How It Works
           </h2>
 
           <div style={{
@@ -127,18 +127,18 @@ export default function HomePage() {
             {[
               {
                 icon: '👤',
-                title: 'Tạo Profile',
-                desc: 'Điền thông tin cá nhân: tên, tuổi, giới tính, bio và email để tạo profile của bạn.',
+                title: 'Create Profile',
+                desc: 'Fill in your personal info: name, age, gender, bio and email to create your profile.',
               },
               {
                 icon: '💖',
                 title: 'Like & Match',
-                desc: 'Duyệt profiles và like người bạn thích. Khi cả hai cùng like nhau → It\'s a Match!',
+                desc: 'Browse profiles and like people you\'re interested in. When both like each other → It\'s a Match!',
               },
               {
                 icon: '📅',
-                title: 'Hẹn Lịch',
-                desc: 'Sau khi match, chọn thời gian rảnh trong 3 tuần tới. Hệ thống tự tìm slot trùng.',
+                title: 'Schedule Date',
+                desc: 'After matching, choose your available times in the next 3 weeks. The system finds overlapping slots.',
               },
             ].map((feature, i) => (
               <div key={i} className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
@@ -159,14 +159,14 @@ export default function HomePage() {
           <section style={{ padding: '40px 0 80px', textAlign: 'center' }}>
             <div className="glass-card" style={{ padding: '40px', maxWidth: '500px', margin: '0 auto' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '12px' }}>
-                Đã có profile?
+                Already have a profile?
               </h3>
               <p style={{ color: 'rgba(226, 232, 240, 0.6)', marginBottom: '24px' }}>
-                Đăng nhập bằng email để truy cập các matches của bạn
+                Log in with your email to access your matches
               </p>
               <Link href="/login">
                 <button className="btn-primary">
-                  Đăng nhập
+                  Log In
                 </button>
               </Link>
             </div>

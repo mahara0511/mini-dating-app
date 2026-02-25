@@ -43,7 +43,7 @@ export default function ProfilesPage() {
         setLikedMap(likeChecks);
       }
     } catch (err) {
-      showToast('Không thể tải danh sách profiles', 'error');
+      showToast('Failed to load profiles', 'error');
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function ProfilesPage() {
 
   const handleLike = async (toUserId: string) => {
     if (!currentUserId) {
-      showToast('Vui lòng đăng nhập hoặc tạo profile trước', 'error');
+      showToast('Please log in or create a profile first', 'error');
       return;
     }
 
@@ -63,14 +63,14 @@ export default function ProfilesPage() {
       if (result.isMatch && result.match) {
         setMatchPopup(result.match);
       } else {
-        showToast('💖 Đã like!', 'success');
+        showToast('Liked!', 'success');
       }
     } catch (err: any) {
       if (err.message?.includes('Already liked')) {
-        showToast('Bạn đã like người này rồi', 'error');
+        showToast('You already liked this person', 'error');
         setLikedMap((prev) => ({ ...prev, [toUserId]: true }));
       } else {
-        showToast(err.message || 'Có lỗi xảy ra', 'error');
+        showToast(err.message || 'An error occurred', 'error');
       }
     } finally {
       setLikingId(null);
@@ -84,9 +84,9 @@ export default function ProfilesPage() {
 
   const getGenderLabel = (gender: string) => {
     switch (gender) {
-      case 'male': return 'Nam';
-      case 'female': return 'Nữ';
-      default: return 'Khác';
+      case 'male': return 'Male';
+      case 'female': return 'Female';
+      default: return 'Other';
     }
   };
 
@@ -105,10 +105,10 @@ export default function ProfilesPage() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            🔍 Khám Phá
+            Discover
           </h1>
           <p style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.95rem' }}>
-            Duyệt profiles và like người bạn thích
+            Browse profiles and like people you're interested in
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export default function ProfilesPage() {
             background: 'rgba(250, 112, 154, 0.08)',
           }}>
             <p style={{ color: '#fca5a5', fontSize: '0.9rem' }}>
-              ⚠️ Bạn cần <a href="/create-profile" style={{ color: '#f093fb', fontWeight: 600 }}>tạo profile</a> hoặc <a href="/login" style={{ color: '#667eea', fontWeight: 600 }}>đăng nhập</a> để bắt đầu like
+              You need to <a href="/create-profile" style={{ color: '#f093fb', fontWeight: 600 }}>create a profile</a> or <a href="/login" style={{ color: '#667eea', fontWeight: 600 }}>log in</a> to start liking
             </p>
           </div>
         )}
@@ -134,7 +134,9 @@ export default function ProfilesPage() {
           <div className="glass-card" style={{ padding: '60px', textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '16px' }}>😢</div>
             <p style={{ color: 'rgba(226, 232, 240, 0.6)', fontSize: '1.1rem' }}>
-              Chưa có profile nào. Hãy là người đầu tiên tạo profile!
+              {currentUserId
+                ? 'No other users yet. Share the app and wait for others to join!'
+                : 'No profiles yet. Be the first to create one!'}
             </p>
           </div>
         ) : (
@@ -157,7 +159,7 @@ export default function ProfilesPage() {
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ color: 'rgba(226, 232, 240, 0.5)', fontSize: '0.85rem' }}>
-                        {user.age} tuổi
+                        {user.age} years old
                       </span>
                       <span className={`gender-tag gender-${user.gender}`}>
                         {getGenderLabel(user.gender)}
@@ -194,7 +196,7 @@ export default function ProfilesPage() {
                     {likingId === user.id ? (
                       <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
                     ) : likedMap[user.id] ? (
-                      <>Đã Like</>
+                      <>Liked</>
                     ) : (
                       <>Like</>
                     )}
@@ -223,17 +225,17 @@ export default function ProfilesPage() {
               It&apos;s a Match!
             </h2>
             <p style={{ color: 'rgba(226, 232, 240, 0.6)', marginBottom: '8px', fontSize: '1rem' }}>
-              Bạn và <strong style={{ color: '#f093fb' }}>
+              You and <strong style={{ color: '#f093fb' }}>
                 {matchPopup.userA?.name === currentUserName ? matchPopup.userB?.name : matchPopup.userA?.name}
-              </strong> đều thích nhau!
+              </strong> both like each other!
             </p>
             <p style={{ color: 'rgba(226, 232, 240, 0.4)', marginBottom: '28px', fontSize: '0.9rem' }}>
-              Hãy lên lịch hẹn gặp nhé 🎉
+              Schedule a date now!
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <a href={`/schedule/${matchPopup.id}`}>
                 <button className="btn-primary">
-                  Hẹn lịch ngay
+                  Schedule a date
                 </button>
               </a>
               <button
@@ -241,7 +243,7 @@ export default function ProfilesPage() {
                 onClick={() => setMatchPopup(null)}
                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
               >
-                Để sau
+                Later
               </button>
             </div>
           </div>

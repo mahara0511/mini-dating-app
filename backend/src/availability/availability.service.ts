@@ -34,6 +34,49 @@ export class AvailabilityService {
       throw new BadRequestException('User does not belong to this match');
     }
 
+    // Validate: dates must be within the next 3 weeks
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 21);
+
+    for (const slot of slots) {
+      const slotDate = new Date(slot.date + 'T00:00:00');
+      if (slotDate <= today || slotDate > maxDate) {
+        throw new BadRequestException(
+          `Date ${slot.date} must be within the next 3 weeks (from tomorrow to ${maxDate.toISOString().split('T')[0]})`,
+        );
+      }
+    }
+
+    // Validate: startTime must be before endTime
+    for (const slot of slots) {
+      if (this.timeToMinutes(slot.startTime) >= this.timeToMinutes(slot.endTime)) {
+        throw new BadRequestException(
+          `Start time (${slot.startTime}) must be before end time (${slot.endTime})`,
+        );
+      }
+    }
+
+    // Validate: no overlapping slots for the same user on the same date
+    for (let i = 0; i < slots.length; i++) {
+      for (let j = i + 1; j < slots.length; j++) {
+        if (slots[i].date === slots[j].date) {
+          const startA = this.timeToMinutes(slots[i].startTime);
+          const endA = this.timeToMinutes(slots[i].endTime);
+          const startB = this.timeToMinutes(slots[j].startTime);
+          const endB = this.timeToMinutes(slots[j].endTime);
+
+          // Two intervals overlap if one starts before the other ends
+          if (startA < endB && startB < endA) {
+            throw new BadRequestException(
+              `Time slots overlap on ${slots[i].date}: ${slots[i].startTime}-${slots[i].endTime} and ${slots[j].startTime}-${slots[j].endTime}`,
+            );
+          }
+        }
+      }
+    }
+
     // Remove existing availability for this user+match combination
     await this.availabilityRepository.delete({ userId, matchId });
 

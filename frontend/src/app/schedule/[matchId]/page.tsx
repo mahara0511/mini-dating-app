@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import {
@@ -39,6 +39,8 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     userBHasSlots: boolean;
   } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     const id = localStorage.getItem('currentUserId');
@@ -63,20 +65,18 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
       setExistingSlots(slots);
       setAvailabilityStatus(status);
 
-      // If already have slots, convert to form state
       if (slots.length > 0) {
         setMySlots(slots.map((s) => ({ date: s.date, startTime: s.startTime, endTime: s.endTime })));
         setSaved(true);
       }
 
-      // If match already has schedule, show it
       if (matchData.scheduledDate) {
         setCommonSlotResult({
           found: true,
           date: matchData.scheduledDate,
           startTime: matchData.scheduledTimeStart || '',
           endTime: matchData.scheduledTimeEnd || '',
-          message: `You have a date scheduled on: ${formatDateStr(matchData.scheduledDate)} from ${matchData.scheduledTimeStart} to ${matchData.scheduledTimeEnd}`,
+          message: `You have a date on: ${formatDateStr(matchData.scheduledDate)} from ${matchData.scheduledTimeStart} to ${matchData.scheduledTimeEnd}`,
         });
       }
     } catch (err) {
@@ -87,32 +87,80 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     }
   };
 
-  // Generate next 3 weeks of dates
-  const getNext3Weeks = (): string[] => {
-    const dates: string[] = [];
+  // Date range: tomorrow to 3 weeks from today
+  const dateRange = useMemo(() => {
     const today = new Date();
-    for (let i = 1; i <= 21; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
-    }
-    return dates;
+    today.setHours(0, 0, 0, 0);
+    const minDate = new Date(today);
+    minDate.setDate(minDate.getDate() + 1);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 21);
+    return { minDate, maxDate };
+  }, []);
+
+  // Calendar helpers
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const toDateStr = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
 
-  const addSlot = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setMySlots([...mySlots, {
-      date: tomorrow.toISOString().split('T')[0],
-      startTime: '09:00',
-      endTime: '12:00',
-    }]);
+  const isDateInRange = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d >= dateRange.minDate && d <= dateRange.maxDate;
+  };
+
+  const slotsOnDate = (dateStr: string) => mySlots.filter((s) => s.date === dateStr);
+
+  const canGoToPrevMonth = () => {
+    const prev = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+    const lastDay = new Date(prev.getFullYear(), prev.getMonth() + 1, 0);
+    return lastDay >= dateRange.minDate;
+  };
+
+  const canGoToNextMonth = () => {
+    const next = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+    return next <= dateRange.maxDate;
+  };
+
+  // Overlap check for a specific date
+  const hasOverlap = (slots: TimeSlot[]): { hasOverlap: boolean; i: number; j: number } => {
+    for (let i = 0; i < slots.length; i++) {
+      for (let j = i + 1; j < slots.length; j++) {
+        if (slots[i].date === slots[j].date) {
+          const startA = timeToMinutes(slots[i].startTime);
+          const endA = timeToMinutes(slots[i].endTime);
+          const startB = timeToMinutes(slots[j].startTime);
+          const endB = timeToMinutes(slots[j].endTime);
+          if (startA < endB && startB < endA) {
+            return { hasOverlap: true, i, j };
+          }
+        }
+      }
+    }
+    return { hasOverlap: false, i: -1, j: -1 };
+  };
+
+  const timeToMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const addSlotForDate = (dateStr: string) => {
+    setMySlots([...mySlots, { date: dateStr, startTime: '09:00', endTime: '12:00' }]);
     setSaved(false);
   };
 
   const removeSlot = (index: number) => {
-    setMySlots(mySlots.filter((_, i) => i !== index));
+    const removed = mySlots[index];
+    const updated = mySlots.filter((_, i) => i !== index);
+    setMySlots(updated);
     setSaved(false);
+    // If no more slots on this date and it was selected, keep selection
   };
 
   const updateSlot = (index: number, field: keyof TimeSlot, value: string) => {
@@ -122,18 +170,24 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     setSaved(false);
   };
 
+  const overlapResult = useMemo(() => hasOverlap(mySlots), [mySlots]);
+
   const handleSave = async () => {
     if (!currentUserId || mySlots.length === 0) {
       showToast('Please add at least 1 time slot', 'error');
       return;
     }
 
-    // Validate slots
     for (const slot of mySlots) {
       if (slot.startTime >= slot.endTime) {
         showToast('Start time must be before end time', 'error');
         return;
       }
+    }
+
+    if (overlapResult.hasOverlap) {
+      showToast('You have overlapping time slots. Please fix them first.', 'error');
+      return;
     }
 
     setSaving(true);
@@ -142,7 +196,6 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
       setSaved(true);
       showToast('Availability saved!', 'success');
 
-      // Refresh status
       const status = await getAvailabilityStatus(matchId);
       setAvailabilityStatus(status);
     } catch (err: any) {
@@ -159,7 +212,6 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
       setCommonSlotResult(result);
 
       if (result.found) {
-        // Reload match data to get new schedule
         const updated = await getMatch(matchId);
         setMatch(updated);
       }
@@ -185,26 +237,18 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     });
   };
 
-  const formatShortDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'numeric',
-    });
-  };
-
   const getPartner = () => {
     if (!match || !currentUserId) return null;
     return match.userAId === currentUserId ? match.userB : match.userA;
   };
 
   const partner = getPartner();
-  const dates3Weeks = getNext3Weeks();
 
   const userIsA = match?.userAId === currentUserId;
   const myAvailabilitySet = userIsA ? availabilityStatus?.userAHasSlots : availabilityStatus?.userBHasSlots;
   const partnerAvailabilitySet = userIsA ? availabilityStatus?.userBHasSlots : availabilityStatus?.userAHasSlots;
+
+  const selectedDateSlots = selectedDate ? mySlots.filter((s) => s.date === selectedDate) : [];
 
   if (loading) {
     return (
@@ -216,6 +260,14 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
       </>
     );
   }
+
+  // Calendar render
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  const monthName = calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <>
@@ -319,129 +371,334 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
           </div>
         )}
 
-        {/* My Availability Form */}
+        {/* Calendar + Slots Form */}
         {!commonSlotResult?.found && (
           <>
             <div className="glass-card" style={{ padding: '28px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0' }}>
-                  Your Available Times
-                </h3>
-                <button
-                  className="btn-primary"
-                  onClick={addSlot}
-                  style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-                >
-                  + Add slot
-                </button>
-              </div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '20px' }}>
+                Pick your available dates & times
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'rgba(226, 232, 240, 0.4)', marginBottom: '20px' }}>
+                Select a date on the calendar, then add your available time slots. Dates are limited to the next 3 weeks.
+              </p>
 
-              {mySlots.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: 'rgba(226, 232, 240, 0.4)' }}>
-                  <p style={{ marginBottom: '12px' }}>No slots yet. Click &quot;+ Add slot&quot; to start.</p>
-                  <p style={{ fontSize: '0.8rem' }}>Select dates and time ranges you're free in the next 3 weeks</p>
+              {/* Calendar */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                padding: '20px',
+                marginBottom: '24px',
+              }}>
+                {/* Month nav */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <button
+                    onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
+                    disabled={!canGoToPrevMonth()}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: canGoToPrevMonth() ? '#e2e8f0' : 'rgba(226, 232, 240, 0.15)',
+                      fontSize: '1.2rem',
+                      cursor: canGoToPrevMonth() ? 'pointer' : 'not-allowed',
+                      padding: '4px 10px',
+                    }}
+                  >
+                    ‹
+                  </button>
+                  <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}>{monthName}</span>
+                  <button
+                    onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
+                    disabled={!canGoToNextMonth()}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: canGoToNextMonth() ? '#e2e8f0' : 'rgba(226, 232, 240, 0.15)',
+                      fontSize: '1.2rem',
+                      cursor: canGoToNextMonth() ? 'pointer' : 'not-allowed',
+                      padding: '4px 10px',
+                    }}
+                  >
+                    ›
+                  </button>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {mySlots.map((slot, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '14px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        borderRadius: '14px',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <div style={{ flex: '1 1 160px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
-                          Date
-                        </label>
-                        <select
-                          className="select-field"
-                          style={{ padding: '10px 14px', fontSize: '0.85rem' }}
-                          value={slot.date}
-                          onChange={(e) => updateSlot(index, 'date', e.target.value)}
-                        >
-                          {dates3Weeks.map((d) => (
-                            <option key={d} value={d}>
-                              {formatShortDate(d)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
-                      <div style={{ flex: '0 1 120px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
-                          From
-                        </label>
-                        <input
-                          type="time"
-                          className="input-field"
-                          style={{ padding: '10px 14px', fontSize: '0.85rem' }}
-                          value={slot.startTime}
-                          onChange={(e) => updateSlot(index, 'startTime', e.target.value)}
-                        />
-                      </div>
-
-                      <div style={{ flex: '0 1 120px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
-                          To
-                        </label>
-                        <input
-                          type="time"
-                          className="input-field"
-                          style={{ padding: '10px 14px', fontSize: '0.85rem' }}
-                          value={slot.endTime}
-                          onChange={(e) => updateSlot(index, 'endTime', e.target.value)}
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => removeSlot(index)}
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
-                          borderRadius: '10px',
-                          color: '#fca5a5',
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          alignSelf: 'flex-end',
-                          marginTop: '16px',
-                        }}
-                      >
-                        Remove
-                      </button>
+                {/* Weekday headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '6px' }}>
+                  {weekDays.map((d) => (
+                    <div key={d} style={{
+                      textAlign: 'center',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      color: 'rgba(226, 232, 240, 0.35)',
+                      padding: '4px 0',
+                    }}>
+                      {d}
                     </div>
                   ))}
                 </div>
+
+                {/* Days grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                  {/* Empty cells for first row offset */}
+                  {Array.from({ length: firstDay }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1;
+                    const dateStr = toDateStr(new Date(year, month, day));
+                    const inRange = isDateInRange(dateStr);
+                    const isSelected = selectedDate === dateStr;
+                    const slotCount = slotsOnDate(dateStr).length;
+
+                    return (
+                      <button
+                        key={day}
+                        disabled={!inRange}
+                        onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          aspectRatio: '1',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '10px',
+                          border: isSelected
+                            ? '2px solid #4facfe'
+                            : slotCount > 0
+                            ? '2px solid rgba(16, 185, 129, 0.4)'
+                            : '1px solid transparent',
+                          background: isSelected
+                            ? 'rgba(79, 172, 254, 0.18)'
+                            : slotCount > 0
+                            ? 'rgba(16, 185, 129, 0.1)'
+                            : inRange
+                            ? 'rgba(255, 255, 255, 0.03)'
+                            : 'transparent',
+                          color: !inRange
+                            ? 'rgba(226, 232, 240, 0.15)'
+                            : isSelected
+                            ? '#4facfe'
+                            : '#e2e8f0',
+                          cursor: inRange ? 'pointer' : 'default',
+                          fontSize: '0.85rem',
+                          fontWeight: isSelected || slotCount > 0 ? 700 : 400,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {day}
+                        {slotCount > 0 && (
+                          <span style={{
+                            fontSize: '0.55rem',
+                            color: '#6ee7b7',
+                            marginTop: '1px',
+                          }}>
+                            {slotCount} slot{slotCount > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Selected date info + add slot */}
+              {selectedDate && (
+                <div style={{
+                  background: 'rgba(79, 172, 254, 0.06)',
+                  border: '1px solid rgba(79, 172, 254, 0.15)',
+                  borderRadius: '14px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#4facfe' }}>
+                      📅 {formatDateStr(selectedDate)}
+                    </h4>
+                    <button
+                      className="btn-primary"
+                      onClick={() => addSlotForDate(selectedDate)}
+                      style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                    >
+                      + Add time slot
+                    </button>
+                  </div>
+
+                  {selectedDateSlots.length === 0 ? (
+                    <p style={{ color: 'rgba(226, 232, 240, 0.35)', fontSize: '0.85rem', textAlign: 'center', padding: '12px 0' }}>
+                      No time slots for this date. Click &quot;+ Add time slot&quot; above.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {selectedDateSlots.map((slot) => {
+                        const globalIndex = mySlots.findIndex(
+                          (s) => s.date === slot.date && s.startTime === slot.startTime && s.endTime === slot.endTime
+                        );
+                        const isOverlapping =
+                          (overlapResult.hasOverlap && (globalIndex === overlapResult.i || globalIndex === overlapResult.j));
+
+                        return (
+                          <div
+                            key={globalIndex}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '12px',
+                              background: isOverlapping
+                                ? 'rgba(239, 68, 68, 0.1)'
+                                : 'rgba(255, 255, 255, 0.04)',
+                              borderRadius: '12px',
+                              border: isOverlapping
+                                ? '1px solid rgba(239, 68, 68, 0.4)'
+                                : '1px solid rgba(255, 255, 255, 0.08)',
+                            }}
+                          >
+                            <div style={{ flex: '1' }}>
+                              <label style={{ fontSize: '0.7rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
+                                From
+                              </label>
+                              <input
+                                type="time"
+                                lang="en"
+                                className="input-field"
+                                style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+                                value={slot.startTime}
+                                onChange={(e) => updateSlot(globalIndex, 'startTime', e.target.value)}
+                              />
+                            </div>
+                            <div style={{ flex: '1' }}>
+                              <label style={{ fontSize: '0.7rem', color: 'rgba(226, 232, 240, 0.4)', display: 'block', marginBottom: '4px' }}>
+                                To
+                              </label>
+                              <input
+                                type="time"
+                                lang="en"
+                                className="input-field"
+                                style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+                                value={slot.endTime}
+                                onChange={(e) => updateSlot(globalIndex, 'endTime', e.target.value)}
+                              />
+                            </div>
+                            <button
+                              onClick={() => removeSlot(globalIndex)}
+                              title="Remove slot"
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                color: '#fca5a5',
+                                padding: '6px 10px',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                alignSelf: 'flex-end',
+                                marginTop: '14px',
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {isOverlappingOnDate(selectedDate) && (
+                        <p style={{
+                          color: '#fca5a5',
+                          fontSize: '0.8rem',
+                          marginTop: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}>
+                          ⚠️ You have overlapping time slots on this date
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
+              {/* Summary of all slots */}
               {mySlots.length > 0 && (
-                <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
-                  <button
-                    className="btn-primary"
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{ flex: 1, padding: '14px' }}
-                  >
-                    {saving ? (
-                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
-                         Saving...
-                      </span>
-                    ) : saved ? (
-                      'Saved'
-                    ) : (
-                      'Save availability'
-                    )}
-                  </button>
+                <div style={{ marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'rgba(226, 232, 240, 0.6)', marginBottom: '10px' }}>
+                    All your time slots ({mySlots.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[...mySlots]
+                      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+                      .map((slot, i) => {
+                        const gIdx = mySlots.indexOf(slot);
+                        const isOvr = overlapResult.hasOverlap && (gIdx === overlapResult.i || gIdx === overlapResult.j);
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedDate(slot.date)}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 14px',
+                              background: isOvr ? 'rgba(239, 68, 68, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                              borderRadius: '10px',
+                              border: isOvr ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.06)',
+                              cursor: 'pointer',
+                              transition: 'background 0.15s',
+                            }}
+                          >
+                            <span style={{ fontSize: '0.83rem', color: isOvr ? '#fca5a5' : '#e2e8f0' }}>
+                              {new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            </span>
+                            <span style={{ fontSize: '0.83rem', color: isOvr ? '#fca5a5' : 'rgba(226, 232, 240, 0.6)' }}>
+                              {slot.startTime} – {slot.endTime}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
+              )}
+
+              {/* Overlap warning */}
+              {overlapResult.hasOverlap && (
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  marginBottom: '16px',
+                }}>
+                  <p style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
+                    ⚠️ You have overlapping time slots. Please fix them before saving.
+                  </p>
+                </div>
+              )}
+
+              {/* Save button */}
+              {mySlots.length > 0 && (
+                <button
+                  className="btn-primary"
+                  onClick={handleSave}
+                  disabled={saving || overlapResult.hasOverlap}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    opacity: overlapResult.hasOverlap ? 0.5 : 1,
+                  }}
+                >
+                  {saving ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
+                       Saving...
+                    </span>
+                  ) : saved ? (
+                    '✓ Saved'
+                  ) : (
+                    'Save availability'
+                  )}
+                </button>
               )}
             </div>
 
@@ -501,4 +758,18 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
       )}
     </>
   );
+
+  function isOverlappingOnDate(dateStr: string): boolean {
+    const slotsForDate = mySlots.filter((s) => s.date === dateStr);
+    for (let i = 0; i < slotsForDate.length; i++) {
+      for (let j = i + 1; j < slotsForDate.length; j++) {
+        const startA = timeToMinutes(slotsForDate[i].startTime);
+        const endA = timeToMinutes(slotsForDate[i].endTime);
+        const startB = timeToMinutes(slotsForDate[j].startTime);
+        const endB = timeToMinutes(slotsForDate[j].endTime);
+        if (startA < endB && startB < endA) return true;
+      }
+    }
+    return false;
+  }
 }

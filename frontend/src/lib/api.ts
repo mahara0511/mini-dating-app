@@ -13,7 +13,7 @@ import type {
 // Re-export types for convenience
 export type { User, LikeResponse, MatchData, AvailabilitySlot, CommonSlotResult, AvailabilityStatus };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = ''; // Calls will naturally proxy through Next.js rewrites to the EC2 backend
 
 // ========== Helper ==========
 

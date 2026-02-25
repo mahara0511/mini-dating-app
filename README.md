@@ -4,8 +4,8 @@
 
 ## Demo
 
-- **Frontend (Vercel):** [Đang cập nhật]
-- **Backend (AWS EC2 / ghcr.io):** [Đang cập nhật]
+- **Frontend (Vercel):** [https://mini-dating-2ysb3rzky-khanhzip14s-projects.vercel.app/]
+- **Backend Swagger(AWS EC2 / ghcr.io):** [http://18.141.9.225:3001/api/docs#/]
 
 ---
 

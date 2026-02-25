@@ -32,6 +32,14 @@ export class AvailabilityController {
     return this.availabilityService.getAvailability(userId, matchId);
   }
 
+  @Get('user/:userId/all')
+  @ApiOperation({ summary: 'Get all availability slots for a user across all matches' })
+  @ApiParam({ name: 'userId', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'All availability slots for the user', type: [AvailabilitySlotResponseDto] })
+  getAllUserAvailability(@Param('userId') userId: string) {
+    return this.availabilityService.getAllUserAvailability(userId);
+  }
+
   @Get('common-slot/:matchId')
   @ApiOperation({ summary: 'Find overlapping time slot between two matched users' })
   @ApiParam({ name: 'matchId', description: 'Match UUID' })

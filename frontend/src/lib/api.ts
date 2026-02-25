@@ -1,60 +1,19 @@
+import type {
+  User,
+  LikeResponse,
+  MatchData,
+  AvailabilitySlot,
+  CommonSlotResult,
+  AvailabilityStatus,
+  CreateUserDto,
+  CreateLikeDto,
+  CreateAvailabilityDto,
+} from './types';
+
+// Re-export types for convenience
+export type { User, LikeResponse, MatchData, AvailabilitySlot, CommonSlotResult, AvailabilityStatus };
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-// ========== Types ==========
-
-export interface User {
-  id: string;
-  name: string;
-  age: number;
-  gender: string;
-  bio: string;
-  email: string;
-  avatarUrl?: string;
-  createdAt: string;
-}
-
-export interface LikeResponse {
-  like: {
-    id: string;
-    fromUserId: string;
-    toUserId: string;
-  };
-  isMatch: boolean;
-  match?: MatchData;
-}
-
-export interface MatchData {
-  id: string;
-  userAId: string;
-  userBId: string;
-  userA: User;
-  userB: User;
-  scheduledDate?: string;
-  scheduledTimeStart?: string;
-  scheduledTimeEnd?: string;
-  createdAt: string;
-}
-
-export interface AvailabilitySlot {
-  id?: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-}
-
-export interface CommonSlotResult {
-  found: boolean;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
-  message: string;
-}
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  timestamp: string;
-}
 
 // ========== Helper ==========
 
@@ -63,7 +22,10 @@ async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
   const json = await res.json();
 
   if (!res.ok) {
-    // Error responses from HttpExceptionFilter
+    // If backend returns detailed validation errors, show them
+    if (json.errors && Array.isArray(json.errors)) {
+      throw new Error(json.errors.join('\n'));
+    }
     throw new Error(json.message || `Request failed with status ${res.status}`);
   }
 
@@ -72,19 +34,12 @@ async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
     return json.data as T;
   }
 
-  // Fallback for backward compatibility
   return json as T;
 }
 
 // ========== USERS ==========
 
-export async function createUser(data: {
-  name: string;
-  age: number;
-  gender: string;
-  bio: string;
-  email: string;
-}): Promise<User> {
+export async function createUser(data: CreateUserDto): Promise<User> {
   return apiRequest<User>(`${API_BASE}/api/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -110,11 +65,11 @@ export async function getUserById(id: string): Promise<User> {
 
 // ========== LIKES ==========
 
-export async function createLike(fromUserId: string, toUserId: string): Promise<LikeResponse> {
+export async function createLike(data: CreateLikeDto): Promise<LikeResponse> {
   return apiRequest<LikeResponse>(`${API_BASE}/api/likes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fromUserId, toUserId }),
+    body: JSON.stringify(data),
   });
 }
 
@@ -141,21 +96,24 @@ export async function getMatch(matchId: string): Promise<MatchData> {
 
 // ========== AVAILABILITY ==========
 
-export async function saveAvailability(
-  userId: string,
-  matchId: string,
-  slots: AvailabilitySlot[],
-): Promise<AvailabilitySlot[]> {
+export async function saveAvailability(data: CreateAvailabilityDto): Promise<AvailabilitySlot[]> {
   return apiRequest<AvailabilitySlot[]>(`${API_BASE}/api/availability`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, matchId, slots }),
+    body: JSON.stringify(data),
   });
 }
 
 export async function getAvailability(userId: string, matchId: string): Promise<AvailabilitySlot[]> {
   return apiRequest<AvailabilitySlot[]>(
     `${API_BASE}/api/availability/user?userId=${userId}&matchId=${matchId}`,
+    { cache: 'no-store' },
+  );
+}
+
+export async function getAllUserAvailability(userId: string): Promise<AvailabilitySlot[]> {
+  return apiRequest<AvailabilitySlot[]>(
+    `${API_BASE}/api/availability/user/${userId}/all`,
     { cache: 'no-store' },
   );
 }
@@ -167,11 +125,8 @@ export async function findCommonSlot(matchId: string): Promise<CommonSlotResult>
   );
 }
 
-export async function getAvailabilityStatus(matchId: string): Promise<{
-  userAHasSlots: boolean;
-  userBHasSlots: boolean;
-}> {
-  return apiRequest<{ userAHasSlots: boolean; userBHasSlots: boolean }>(
+export async function getAvailabilityStatus(matchId: string): Promise<AvailabilityStatus> {
+  return apiRequest<AvailabilityStatus>(
     `${API_BASE}/api/availability/status/${matchId}`,
     { cache: 'no-store' },
   );

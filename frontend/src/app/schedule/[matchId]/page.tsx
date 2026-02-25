@@ -7,6 +7,7 @@ import {
   getMatch,
   saveAvailability,
   getAvailability,
+  getAllUserAvailability,
   findCommonSlot,
   getAvailabilityStatus,
   MatchData,
@@ -32,6 +33,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
   const [mySlots, setMySlots] = useState<TimeSlot[]>([]);
   const [existingSlots, setExistingSlots] = useState<AvailabilitySlot[]>([]);
+  const [otherMatchSlots, setOtherMatchSlots] = useState<AvailabilitySlot[]>([]);
   const [commonSlotResult, setCommonSlotResult] = useState<CommonSlotResult | null>(null);
   const [saved, setSaved] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState<{
@@ -56,14 +58,19 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
   const loadData = async (userId: string) => {
     try {
-      const [matchData, slots, status] = await Promise.all([
+      const [matchData, slots, status, allSlots] = await Promise.all([
         getMatch(matchId),
         getAvailability(userId, matchId),
         getAvailabilityStatus(matchId),
+        getAllUserAvailability(userId),
       ]);
       setMatch(matchData);
       setExistingSlots(slots);
       setAvailabilityStatus(status);
+
+      // Slots from other matches (not the current one)
+      const otherSlots = allSlots.filter((s) => s.matchId !== matchId);
+      setOtherMatchSlots(otherSlots);
 
       if (slots.length > 0) {
         setMySlots(slots.map((s) => ({ date: s.date, startTime: s.startTime, endTime: s.endTime })));
@@ -115,6 +122,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
   };
 
   const slotsOnDate = (dateStr: string) => mySlots.filter((s) => s.date === dateStr);
+  const otherSlotsOnDate = (dateStr: string) => otherMatchSlots.filter((s) => s.date === dateStr);
 
   const canGoToPrevMonth = () => {
     const prev = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
@@ -128,7 +136,8 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
   };
 
   // Overlap check for a specific date
-  const hasOverlap = (slots: TimeSlot[]): { hasOverlap: boolean; i: number; j: number } => {
+  const hasOverlap = (slots: TimeSlot[], otherSlots: AvailabilitySlot[]): { hasOverlap: boolean; internalI: number; internalJ: number; externalI: number; externalOtherIdx: number } => {
+    // Check internal overlaps
     for (let i = 0; i < slots.length; i++) {
       for (let j = i + 1; j < slots.length; j++) {
         if (slots[i].date === slots[j].date) {
@@ -137,12 +146,26 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
           const startB = timeToMinutes(slots[j].startTime);
           const endB = timeToMinutes(slots[j].endTime);
           if (startA < endB && startB < endA) {
-            return { hasOverlap: true, i, j };
+            return { hasOverlap: true, internalI: i, internalJ: j, externalI: -1, externalOtherIdx: -1 };
           }
         }
       }
     }
-    return { hasOverlap: false, i: -1, j: -1 };
+    // Check external overlaps
+    for (let i = 0; i < slots.length; i++) {
+      for (let k = 0; k < otherSlots.length; k++) {
+        if (slots[i].date === otherSlots[k].date) {
+          const startA = timeToMinutes(slots[i].startTime);
+          const endA = timeToMinutes(slots[i].endTime);
+          const startB = timeToMinutes(otherSlots[k].startTime);
+          const endB = timeToMinutes(otherSlots[k].endTime);
+          if (startA < endB && startB < endA) {
+            return { hasOverlap: true, internalI: -1, internalJ: -1, externalI: i, externalOtherIdx: k };
+          }
+        }
+      }
+    }
+    return { hasOverlap: false, internalI: -1, internalJ: -1, externalI: -1, externalOtherIdx: -1 };
   };
 
   const timeToMinutes = (time: string) => {
@@ -170,7 +193,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     setSaved(false);
   };
 
-  const overlapResult = useMemo(() => hasOverlap(mySlots), [mySlots]);
+  const overlapResult = useMemo(() => hasOverlap(mySlots, otherMatchSlots), [mySlots, otherMatchSlots]);
 
   const handleSave = async () => {
     if (!currentUserId || mySlots.length === 0) {
@@ -192,7 +215,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
     setSaving(true);
     try {
-      await saveAvailability(currentUserId, matchId, mySlots);
+      await saveAvailability({ userId: currentUserId, matchId, slots: mySlots });
       setSaved(true);
       showToast('Availability saved!', 'success');
 
@@ -249,6 +272,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
   const partnerAvailabilitySet = userIsA ? availabilityStatus?.userBHasSlots : availabilityStatus?.userAHasSlots;
 
   const selectedDateSlots = selectedDate ? mySlots.filter((s) => s.date === selectedDate) : [];
+  const selectedDateOtherSlots = selectedDate ? otherMatchSlots.filter((s) => s.date === selectedDate) : [];
 
   if (loading) {
     return (
@@ -273,6 +297,25 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
     <>
       <Navbar currentUserId={currentUserId} currentUserName={currentUserName} />
       <main className="page-enter" style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px' }}>
+        {/* Back button */}
+        <a
+          href="/matches"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: 'rgba(226, 232, 240, 0.5)',
+            fontSize: '0.9rem',
+            textDecoration: 'none',
+            marginBottom: '20px',
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#e2e8f0')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(226, 232, 240, 0.5)')}
+        >
+          ← Back to Matches
+        </a>
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <h1 style={{
@@ -450,6 +493,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                     const inRange = isDateInRange(dateStr);
                     const isSelected = selectedDate === dateStr;
                     const slotCount = slotsOnDate(dateStr).length;
+                    const otherCount = otherSlotsOnDate(dateStr).length;
 
                     return (
                       <button
@@ -469,11 +513,15 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                             ? '2px solid #4facfe'
                             : slotCount > 0
                             ? '2px solid rgba(16, 185, 129, 0.4)'
+                            : otherCount > 0
+                            ? '2px solid rgba(245, 158, 11, 0.3)'
                             : '1px solid transparent',
                           background: isSelected
                             ? 'rgba(79, 172, 254, 0.18)'
                             : slotCount > 0
                             ? 'rgba(16, 185, 129, 0.1)'
+                            : otherCount > 0
+                            ? 'rgba(245, 158, 11, 0.06)'
                             : inRange
                             ? 'rgba(255, 255, 255, 0.03)'
                             : 'transparent',
@@ -484,7 +532,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                             : '#e2e8f0',
                           cursor: inRange ? 'pointer' : 'default',
                           fontSize: '0.85rem',
-                          fontWeight: isSelected || slotCount > 0 ? 700 : 400,
+                          fontWeight: isSelected || slotCount > 0 || otherCount > 0 ? 700 : 400,
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -496,6 +544,15 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                             marginTop: '1px',
                           }}>
                             {slotCount} slot{slotCount > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {otherCount > 0 && slotCount === 0 && (
+                          <span style={{
+                            fontSize: '0.55rem',
+                            color: '#fbbf24',
+                            marginTop: '1px',
+                          }}>
+                            {otherCount} busy
                           </span>
                         )}
                       </button>
@@ -537,7 +594,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                           (s) => s.date === slot.date && s.startTime === slot.startTime && s.endTime === slot.endTime
                         );
                         const isOverlapping =
-                          (overlapResult.hasOverlap && (globalIndex === overlapResult.i || globalIndex === overlapResult.j));
+                          (overlapResult.hasOverlap && (globalIndex === overlapResult.internalI || globalIndex === overlapResult.internalJ || globalIndex === overlapResult.externalI));
 
                         return (
                           <div
@@ -617,6 +674,38 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                       )}
                     </div>
                   )}
+
+                  {/* Other match slots (read-only) */}
+                  {selectedDateOtherSlots.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <h5 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fbbf24', marginBottom: '8px' }}>
+                        🔒 Busy from other matches ({selectedDateOtherSlots.length})
+                      </h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {selectedDateOtherSlots.map((slot, i) => (
+                          <div
+                            key={`other-${i}`}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 12px',
+                              background: 'rgba(245, 158, 11, 0.06)',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(245, 158, 11, 0.15)',
+                            }}
+                          >
+                            <span style={{ fontSize: '0.8rem', color: 'rgba(226, 232, 240, 0.5)' }}>
+                              Other match
+                            </span>
+                            <span style={{ fontSize: '0.8rem', color: '#fbbf24' }}>
+                              {slot.startTime} – {slot.endTime}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -631,7 +720,7 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
                       .map((slot, i) => {
                         const gIdx = mySlots.indexOf(slot);
-                        const isOvr = overlapResult.hasOverlap && (gIdx === overlapResult.i || gIdx === overlapResult.j);
+                        const isOvr = overlapResult.hasOverlap && (gIdx === overlapResult.internalI || gIdx === overlapResult.internalJ || gIdx === overlapResult.externalI);
                         return (
                           <div
                             key={i}
@@ -671,7 +760,9 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
                   marginBottom: '16px',
                 }}>
                   <p style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
-                    ⚠️ You have overlapping time slots. Please fix them before saving.
+                    ⚠️ {overlapResult.internalI !== -1 
+                        ? 'You have overlapping time slots. Please fix them before saving.'
+                        : 'One of your time slots conflicts with another match. Please fix it before saving.'}
                   </p>
                 </div>
               )}
@@ -761,12 +852,21 @@ export default function SchedulePage({ params }: { params: Promise<{ matchId: st
 
   function isOverlappingOnDate(dateStr: string): boolean {
     const slotsForDate = mySlots.filter((s) => s.date === dateStr);
+    const otherSlotsForDate = otherMatchSlots.filter((s) => s.date === dateStr);
+
     for (let i = 0; i < slotsForDate.length; i++) {
       for (let j = i + 1; j < slotsForDate.length; j++) {
         const startA = timeToMinutes(slotsForDate[i].startTime);
         const endA = timeToMinutes(slotsForDate[i].endTime);
         const startB = timeToMinutes(slotsForDate[j].startTime);
         const endB = timeToMinutes(slotsForDate[j].endTime);
+        if (startA < endB && startB < endA) return true;
+      }
+      for (let k = 0; k < otherSlotsForDate.length; k++) {
+        const startA = timeToMinutes(slotsForDate[i].startTime);
+        const endA = timeToMinutes(slotsForDate[i].endTime);
+        const startB = timeToMinutes(otherSlotsForDate[k].startTime);
+        const endB = timeToMinutes(otherSlotsForDate[k].endTime);
         if (startA < endB && startB < endA) return true;
       }
     }

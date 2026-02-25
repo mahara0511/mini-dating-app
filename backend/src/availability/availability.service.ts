@@ -58,7 +58,7 @@ export class AvailabilityService {
       }
     }
 
-    // Validate: no overlapping slots for the same user on the same date
+    // Validate: no overlapping slots within the submitted slots (same date)
     for (let i = 0; i < slots.length; i++) {
       for (let j = i + 1; j < slots.length; j++) {
         if (slots[i].date === slots[j].date) {
@@ -67,10 +67,35 @@ export class AvailabilityService {
           const startB = this.timeToMinutes(slots[j].startTime);
           const endB = this.timeToMinutes(slots[j].endTime);
 
-          // Two intervals overlap if one starts before the other ends
           if (startA < endB && startB < endA) {
             throw new BadRequestException(
               `Time slots overlap on ${slots[i].date}: ${slots[i].startTime}-${slots[i].endTime} and ${slots[j].startTime}-${slots[j].endTime}`,
+            );
+          }
+        }
+      }
+    }
+
+    // Validate: no overlapping slots with OTHER matches of this user
+    const existingSlotsFromOtherMatches = await this.availabilityRepository.find({
+      where: { userId },
+    });
+    // Filter out slots from the current match (since we will replace them)
+    const otherMatchSlots = existingSlotsFromOtherMatches.filter(
+      (s) => s.matchId !== matchId,
+    );
+
+    for (const newSlot of slots) {
+      for (const existing of otherMatchSlots) {
+        if (newSlot.date === existing.date) {
+          const newStart = this.timeToMinutes(newSlot.startTime);
+          const newEnd = this.timeToMinutes(newSlot.endTime);
+          const existStart = this.timeToMinutes(existing.startTime);
+          const existEnd = this.timeToMinutes(existing.endTime);
+
+          if (newStart < existEnd && existStart < newEnd) {
+            throw new BadRequestException(
+              `Time slot ${newSlot.date} ${newSlot.startTime}-${newSlot.endTime} conflicts with an existing slot (${existing.startTime}-${existing.endTime}) from another match`,
             );
           }
         }
@@ -100,6 +125,13 @@ export class AvailabilityService {
   ): Promise<Availability[]> {
     return this.availabilityRepository.find({
       where: { userId, matchId },
+      order: { date: 'ASC', startTime: 'ASC' },
+    });
+  }
+
+  async getAllUserAvailability(userId: string): Promise<Availability[]> {
+    return this.availabilityRepository.find({
+      where: { userId },
       order: { date: 'ASC', startTime: 'ASC' },
     });
   }

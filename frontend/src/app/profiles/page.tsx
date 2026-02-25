@@ -57,7 +57,7 @@ export default function ProfilesPage() {
 
     setLikingId(toUserId);
     try {
-      const result = await createLike(currentUserId, toUserId);
+      const result = await createLike({ fromUserId: currentUserId, toUserId });
       setLikedMap((prev) => ({ ...prev, [toUserId]: true }));
 
       if (result.isMatch && result.match) {

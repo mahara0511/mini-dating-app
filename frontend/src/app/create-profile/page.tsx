@@ -187,7 +187,15 @@ export default function CreateProfilePage() {
                 color: '#fca5a5',
                 fontSize: '0.9rem',
               }}>
-                ❌ {error}
+                {error.includes('\n') ? (
+                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {error.split('\n').map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span>❌ {error}</span>
+                )}
               </div>
             )}
 

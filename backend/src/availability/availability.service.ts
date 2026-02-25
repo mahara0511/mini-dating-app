@@ -162,31 +162,52 @@ export class AvailabilityService {
       };
     }
 
-    // Find the first overlapping slot
-    for (const slotA of slotsA) {
-      for (const slotB of slotsB) {
-        if (slotA.date === slotB.date) {
-          const overlapStart = this.maxTime(slotA.startTime, slotB.startTime);
-          const overlapEnd = this.minTime(slotA.endTime, slotB.endTime);
+    // Find the first overlapping slot using Two Pointers O(N + M)
+    let i = 0;
+    let j = 0;
 
-          if (this.timeToMinutes(overlapStart) < this.timeToMinutes(overlapEnd)) {
-            // Found an overlapping slot! Update the match with the schedule
-            await this.matchesService.updateSchedule(
-              matchId,
-              slotA.date,
-              overlapStart,
-              overlapEnd,
-            );
+    while (i < slotsA.length && j < slotsB.length) {
+      const slotA = slotsA[i];
+      const slotB = slotsB[j];
 
-            return {
-              found: true,
-              date: slotA.date,
-              startTime: overlapStart,
-              endTime: overlapEnd,
-              message: `You have a date on: ${this.formatDate(slotA.date)} from ${overlapStart} to ${overlapEnd}`,
-            };
-          }
-        }
+      // Nếu ngày khác nhau → move pointer sớm hơn
+      if (slotA.date < slotB.date) {
+        i++;
+        continue;
+      }
+
+      if (slotA.date > slotB.date) {
+        j++;
+        continue;
+      }
+
+      // Cùng ngày → check overlap
+      const overlapStart = this.maxTime(slotA.startTime, slotB.startTime);
+      const overlapEnd = this.minTime(slotA.endTime, slotB.endTime);
+
+      if (this.timeToMinutes(overlapStart) < this.timeToMinutes(overlapEnd)) {
+        // Found an overlapping slot! Update the match with the schedule
+        await this.matchesService.updateSchedule(
+          matchId,
+          slotA.date,
+          overlapStart,
+          overlapEnd,
+        );
+
+        return {
+          found: true,
+          date: slotA.date,
+          startTime: overlapStart,
+          endTime: overlapEnd,
+          message: `You have a date on: ${this.formatDate(slotA.date)} from ${overlapStart} to ${overlapEnd}`,
+        };
+      }
+
+      // Move pointer có endTime nhỏ hơn
+      if (this.timeToMinutes(slotA.endTime) < this.timeToMinutes(slotB.endTime)) {
+        i++;
+      } else {
+        j++;
       }
     }
 
